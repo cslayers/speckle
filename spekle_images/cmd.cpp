@@ -43,7 +43,7 @@ static void test_image_builder() {
 
 
 int main() {
-	srand(time(0));
+	srand(static_cast<unsigned int>(time(0)));
 	test_image_builder();
 
 

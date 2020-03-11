@@ -81,7 +81,8 @@ namespace speckle {
 	public:
 		static int build_image(const config& conf, image& res) {
 			// 4.1. 2D-DIC for in-plane deformation measurement
-			// Zhou Y, Sun C, Chen J. Adaptive subset offset for systematic error reduction in incremental digital image correlation[J]. 
+			// Zhou Y, Sun C, Chen J. 
+			// Adaptive subset offset for systematic error reduction in incremental digital image correlation[J]. 
 			// Optics and Lasers in Engineering, 2014, 55: 5-11.
 
 			image temp(conf.size);
