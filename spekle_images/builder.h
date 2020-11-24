@@ -1,16 +1,11 @@
-#pragma once
+#include "image.h"
 
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <utility>
 
-#include <opencv2\core.hpp>
-#include <opencv2\imgproc.hpp>
-#include <opencv2\highgui.hpp>
 
-
-#include "image.h"
 
 namespace speckle {
 	using std::string;
@@ -30,15 +25,15 @@ namespace speckle {
 	};
 
 
-	static config default_config() {
+	inline config default_config() {
 		config res;
-		res.size = { 100,100 };
+		res.size = { 512,512 };
 		res.radius = 3.1f;
-		res.number = 500;
+		res.number = 1000;
 		res.factor_lower = 0.4f;
 		res.factor_upper = 0.8f;
 
-		res.filepath = "D:\\gen\\";
+		res.filepath = "C:\\Users\\205\\Desktop\\work\\gen\\";
 		return res;
 	}
 
@@ -91,7 +86,8 @@ namespace speckle {
 			//获得N个位置和灰度强度
 			unsigned int N = conf.number;
 			vector<pos> positions = _random_positions(N, temp);
-			vector<intensity_t> intensities = _random_intensities(N, conf.factor_lower, conf.factor_upper);
+			vector<intensity_t> intensities =
+				_random_intensities(N, conf.factor_lower, conf.factor_upper);
 
 			float R = conf.radius;
 
@@ -121,17 +117,15 @@ namespace speckle {
 
 			if (conf.filepath.length() > 0) {
 
-				cv::Mat img_save((int)conf.size.rows, (int)conf.size.cols, CV_8UC1);
-
-				for (int i = 0; i < img_save.rows; ++i) {
-					uchar * p_row = img_save.ptr<uchar>(i);
-					for (int j = 0; j < img_save.cols; ++j) {
-						p_row[j] = temp[i][j];
-					}
+				string path = string(conf.filepath + std::to_string(rand()) + ".bmp");
+				temp.setpath(path);
+				if (im_write(temp, path)) {
+					std::cerr << "[warnning]: fail to save image" << std::endl;
+					return 1;
 				}
-
-				if (!cv::imwrite(conf.filepath + std::to_string(rand()) + ".bmp", img_save)) std::cerr << "[warnning]: fail to save image" << std::endl;
 			}
+
+			else return 1;
 
 			res.swap(temp);
 

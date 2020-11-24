@@ -1,7 +1,11 @@
-#pragma once
+#ifndef _IMAGE_H_SPECKLE_
+#define _IMAGE_H_SPECKLE_
+
 #include <vector>
 #include <iostream>
-
+#include <opencv2\core.hpp>
+#include <opencv2\imgproc.hpp>
+#include <opencv2\highgui.hpp>
 namespace speckle {
 	using std::vector;
 
@@ -18,6 +22,7 @@ namespace speckle {
 
 	private:
 		vector<vector<intensity_t>> _data;
+		std::string _path;
 
 	public:
 		explicit image(image_size size = { 1,1 }) {
@@ -35,8 +40,32 @@ namespace speckle {
 			return static_cast<size_t>(_data[0].size());
 		}
 
+		image_size size() const {
+			image_size res;
+			res.cols = cols();
+			res.rows = rows();
+			return res;
+		}
+
+		std::string path() {
+			return _path;
+		}
+
+		void setpath(std::string path) {
+			_path = path;
+		}
+
+		void resize(image_size s) {
+			_data.resize(s.rows);
+			for (auto& line : _data) line.resize(s.cols);
+		}
+
 		vector<intensity_t>& operator[](size_t row) {
 			return _data[row];
+		}
+
+		float_t operator()(size_t x, size_t y) {
+			return _data[y][x];
 		}
 
 		void print(std::ostream& out = std::cout) const {
@@ -53,11 +82,52 @@ namespace speckle {
 	public:
 		void swap(image& another) {
 			_data.swap(another._data);
+			_path.swap(another._path);
 		}
 	};
 
 
-	inline static void test_image_class() {
+
+	inline int im_write(image& img, std::string path) {
+
+		cv::Mat img_save((int)img.size().rows, (int)img.size().cols, CV_8UC1);
+
+		for (int i = 0; i < img_save.rows; ++i) {
+			uchar * p_row = img_save.ptr<uchar>(i);
+			for (int j = 0; j < img_save.cols; ++j) {
+				p_row[j] = img[i][j];
+			}
+		}
+		if (!cv::imwrite(path, img_save)) {
+			std::cerr << "[warnning]: fail to save image" << path << std::endl;
+			return 1;
+		}
+		std::cout << "[IO] save image to: " << path << std::endl;
+		return 0;
+	}
+
+
+
+	inline int im_read(std::string path, image& img) {
+		cv::Mat in = cv::imread(path, cv::IMREAD_GRAYSCALE);
+		if (!in.data) return 1;
+
+		img.resize({ (size_t)in.rows, (size_t)in.cols });
+		img.setpath(path);
+
+		for (int i = 0; i < in.rows; ++i) {
+			uchar * p_row = in.ptr<uchar>(i);
+			for (int j = 0; j < in.cols; ++j) {
+				img[i][j] = p_row[j];
+			}
+		}
+		return 0;
+	}
+
+
+
+
+	inline void test_image_class() {
 		image::image_size size{ 3,3 };
 
 		image timg(size);
@@ -84,4 +154,8 @@ namespace speckle {
 		another.print();
 	}
 
+
+
 }
+
+#endif
