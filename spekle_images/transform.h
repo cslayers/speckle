@@ -7,23 +7,24 @@
 
 namespace speckle {
 
-	inline void inverse_matrix(float input[3][3], float result[3][3]) {
+	template<int n>
+	inline void inverse_matrix(float input[n][n], float result[n][n]) {
 		int i, col, row;
 		int temp;
 
-		for (row = 0; row < 3; row++)
+		for (row = 0; row < n; row++)
 		{
-			for (col = 0; col < 3; col++)
+			for (col = 0; col < n; col++)
 			{
 				result[row][col] = col == row ? 1.0f : 0.0f;
 			}
 		}
 
-		for (col = 0; col < 3; col++)
+		for (col = 0; col < n; col++)
 		{
-			// Find pivot (maximum lth column element) in the rest (3-l) rows
+			// Find pivot (maximum lth column element) in the rest (n-l) rows
 			temp = col;
-			for (row = col + 1; row < 3; row++)
+			for (row = col + 1; row < n; row++)
 			{
 				if (input[row][col] > input[temp][col])
 				{
@@ -37,7 +38,7 @@ namespace speckle {
 			// Swap the row which has maximum lth column element
 			if (temp != col)
 			{
-				for (i = 0; i < 3; i++)
+				for (i = 0; i < n; i++)
 				{
 					float buf = input[col][i];
 					input[col][i] = input[temp][i];
@@ -49,12 +50,12 @@ namespace speckle {
 				}
 			}
 			// Perform row operation to form required identity matrix out of the Hessian matrix
-			for (row = 0; row < 3; row++)
+			for (row = 0; row < n; row++)
 			{
 				float curRowEle = input[row][col];
 				if (row != col)
 				{
-					for (i = 0; i < 3; i++)
+					for (i = 0; i < n; i++)
 					{
 						result[row][i] -= result[col][i] * curRowEle / input[col][col];
 						input[row][i] -= input[col][i] * curRowEle / input[col][col];
@@ -62,7 +63,7 @@ namespace speckle {
 				}
 				else
 				{
-					for (i = 0; i < 3; i++)
+					for (i = 0; i < n; i++)
 					{
 						result[row][i] /= curRowEle;
 						input[row][i] /= curRowEle;
@@ -171,12 +172,188 @@ namespace speckle {
 			m[2][1] = 0.f;
 			m[2][2] = 1.f;
 
-			inverse_matrix(m, invm);
+			inverse_matrix<3>(m, invm);
 		}
 	private:
 		float invm[3][3];
 		float u, ux, uy, v, vx, vy;
 	};
+
+
+
+
+
+	class shapefunc2 : public mapbase {
+	public:
+		virtual point2d map(const point2d& coor) const {
+			float x = coor.x;
+			float y = coor.y;
+			float xx = x * x;
+			float xy = x * y;
+			float yy = y * y;
+
+			float xp = 0.f;
+			float yp = 0.f;
+			xp += xx * dv.uxx * 0.5f;
+			xp += xy * dv.uxy;
+			xp += yy * dv.uyy * 0.5f;
+			xp += x * (1 + dv.ux);
+			xp += y * dv.uy;
+			xp += 1 * dv.u;
+
+			yp += xx * dv.vxx * 0.5f;
+			yp += xy * dv.vxy;
+			yp += yy * dv.vyy * 0.5f;
+			yp += x * dv.vx;
+			yp += y * (dv.vy + 1);
+			yp += 1 * dv.v;
+
+			return { xp, yp };
+		}
+
+		virtual point2d map_inv(const point2d& coor) const {
+			float x = coor.x;
+			float y = coor.y;
+			float xx = x * x;
+			float xy = x * y;
+			float yy = y * y;
+
+			float xp = 0.f;
+			float yp = 0.f;
+			xp += xx * indv.uxx * 0.5f;
+			xp += xy * indv.uxy;
+			xp += yy * indv.uyy * 0.5f;
+			xp += x * (1 + indv.ux);
+			xp += y * indv.uy;
+			xp += 1 * indv.u;
+
+			yp += xx * indv.vxx * 0.5f;
+			yp += xy * indv.vxy;
+			yp += yy * indv.vyy * 0.5f;
+			yp += x * indv.vx;
+			yp += y * (indv.vy + 1);
+			yp += 1 * indv.v;
+
+			return { xp, yp };
+		}
+
+
+
+	private:
+		union {
+			struct {
+				float u, ux, uy, uxx, uxy, uyy;
+				float v, vx, vy, vxx, vxy, vyy;
+			};
+			float data[12];
+		}dv, indv;
+
+
+	public:
+		shapefunc2(
+			float u, float ux, float uy, float uxx, float uxy, float uyy,
+			float v, float vx, float vy, float vxx, float vxy, float vyy
+		) {
+			dv.u = u;
+			dv.ux = ux;
+			dv.uy = uy;
+			dv.uxx = uxx;
+			dv.uxy = uxy;
+			dv.uyy = uyy;
+			dv.v = v;
+			dv.vx = vx;
+			dv.vy = vy;
+			dv.vxx = vxx;
+			dv.vxy = vxy;
+			dv.vyy = vyy;
+
+			float s[18];
+			s[0] = 2 * ux + ux * ux + u * ux;
+			s[1] = 2 * u*uxy + 2 * (1 + ux)*uy;
+			s[2] = uy * uy + u * uyy;
+			s[3] = 2 * u*(1 + ux);
+			s[4] = 2 * u*uy;
+			s[5] = u * u;
+			s[6] = 0.5f * (v*uxx + 2 * (1 + ux)*vx + u * vxx);
+			s[7] = uy * vx + ux * vy + v * uxy + u * vxy + vy + ux;
+			s[8] = 0.5f * (v*uyy + 2 * uy*(1 + vy) + u * vyy);
+
+			s[9] = v + v * ux + u * vx;
+			s[10] = u + v * uy + u * vy;
+			s[11] = u * v;
+			s[12] = vx * vx + v * vxx;
+			s[13] = 2 * v * vxy + 2 * vx*(1 + vy);
+			s[14] = 2 * vy + vy * vy + v * vyy;
+			s[15] = 2 * v * vx;
+			s[16] = 2 * v *(1 + vy);
+			s[17] = v * v;
+
+
+			float m[6][6];
+
+			for (int i = 0; i < 3; i++)
+				for (int j = 0; j < 6; j++)
+					m[i][j] = s[i * 6 + j];
+
+			m[0][0]++;
+			m[1][1]++;
+			m[2][2]++;
+
+			m[3][0] = 0.5f *uxx;
+			m[3][1] = uxy;
+			m[3][2] = 0.5f*uyy;
+			m[3][3] = 1 + ux;
+			m[3][4] = uy;
+			m[3][5] = u;
+
+			m[4][0] = 0.5f *vxx;
+			m[4][1] = vxy;
+			m[4][2] = 0.5f*vyy;
+			m[4][3] = vx;
+			m[4][4] = 1 + vy;
+			m[4][5] = v;
+
+			m[5][0] = 0;
+			m[5][1] = 0;
+			m[5][2] = 0;
+			m[5][3] = 0;
+			m[5][4] = 0;
+			m[5][5] = 1;
+
+
+			float invm[6][6];
+			inverse_matrix<6>(m, invm);
+
+			indv.u = invm[3][5];
+			indv.ux = invm[3][3] - 1;
+			indv.uy = invm[3][4];
+			indv.uxx = invm[3][0] * 2;
+			indv.uxy = invm[3][1];
+			indv.uyy = invm[3][2] * 2;
+			indv.v = invm[4][5];
+			indv.vx = invm[4][3];
+			indv.vy = invm[4][4] - 1;
+			indv.vxx = invm[4][0] * 2;
+			indv.vxy = invm[4][1];
+			indv.vyy = invm[4][2] * 2;
+
+
+			for (int i = 0; i < 12; ++i) {
+				cout << dv.data[i] << "\t" << endl;
+			}
+			cout << endl;
+
+			for (int i = 0; i < 12; ++i) {
+				cout << indv.data[i] << "\t" << endl;
+			}
+			cout << endl;
+
+
+		}
+	};
+
+
+
 
 	class sinosoidal_x : public mapbase {
 	public:
