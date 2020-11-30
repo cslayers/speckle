@@ -96,7 +96,6 @@ void transform_shapefunc2(image& src, image& dst) {
 
 	float ux = -0.11f;
 	float uy = -0.12f;
-
 	float vx = -0.13f;
 	float vy = -0.14f;
 

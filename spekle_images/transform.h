@@ -212,29 +212,40 @@ namespace speckle {
 		}
 
 		virtual point2d map_inv(const point2d& coor) const {
-			float x = coor.x;
-			float y = coor.y;
-			float xx = x * x;
-			float xy = x * y;
-			float yy = y * y;
+			float xp = coor.x;
+			float yp = coor.y;
+			float xx = xp * xp;
+			float xy = xp * yp;
+			float yy = yp * yp;
 
-			float xp = 0.f;
-			float yp = 0.f;
-			xp += xx * indv.uxx * 0.5f;
-			xp += xy * indv.uxy;
-			xp += yy * indv.uyy * 0.5f;
-			xp += x * (1 + indv.ux);
-			xp += y * indv.uy;
-			xp += 1 * indv.u;
+			float x = 0.f;
+			float y = 0.f;
+			x += xx * indv.uxx * 0.5f;
+			x += xy * indv.uxy;
+			x += yy * indv.uyy * 0.5f;
+			x += xp * (1 + indv.ux);
+			x += yp * indv.uy;
+			x += 1 * indv.u;
 
-			yp += xx * indv.vxx * 0.5f;
-			yp += xy * indv.vxy;
-			yp += yy * indv.vyy * 0.5f;
-			yp += x * indv.vx;
-			yp += y * (indv.vy + 1);
-			yp += 1 * indv.v;
+			y += xx * indv.vxx * 0.5f;
+			y += xy * indv.vxy;
+			y += yy * indv.vyy * 0.5f;
+			y += xp * indv.vx;
+			y += yp * (indv.vy + 1);
+			y += 1 * indv.v;
 
-			return { xp, yp };
+			//µü´ú
+			for (int i = 0; i < 10; ++i) {
+				point2d curp = map({ x,y });
+				float updatex = curp.x - xp;
+				float updatey = curp.y - yp;
+				x -= updatex;
+				y -= updatey;
+			}
+
+
+
+			return { x, y };
 		}
 
 
